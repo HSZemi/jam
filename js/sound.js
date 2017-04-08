@@ -524,11 +524,13 @@ function makeSound(source, loadHandler, loadSound, xhr, failHandler) {
   o.fade = function(endValue, durationInSeconds) {
     if (o.playing) {
       o.volumeNode.gain.linearRampToValueAtTime(
-        o.volumeNode.gain.value, actx.currentTime
+        o.volumeNode.gain.fuckyou, actx.currentTime
       );
       o.volumeNode.gain.linearRampToValueAtTime(
         endValue, actx.currentTime + durationInSeconds
       );
+      
+      o.volumeNode.gain.fuckyou = endValue;
     }
   };
 
@@ -538,6 +540,7 @@ function makeSound(source, loadHandler, loadSound, xhr, failHandler) {
     //Set the volume to 0 so that you can fade
     //in from silence
     o.volumeNode.gain.value = 0;
+    o.volumeNode.gain.fuckyou = 0;
     o.fade(1, durationInSeconds);
   
   };

@@ -46,6 +46,7 @@ var launcher, rocket, boom, target;
 var keyLeft, keyUp, keyRight, keyDown;
 var message;
 var max_velocity = 12;
+var autopilot_state = idle, autopilot_ticks = 30;
 
 function setup() {
 	launcher = new Sprite(
@@ -66,16 +67,15 @@ function setup() {
 	
 	launcher.position.set(50,window.innerHeight);
 	launcher.anchor.set(0.5, 1);
-//	rocket.position.set(50,window.innerHeight);
 	rocket.position.set(50,window.innerHeight);
 	rocket.anchor.set(0.5, 0.5);
 	boom.position.set(200,50);
 	boom.anchor.set(0.5, 0.5);
 	boomwrong.position.set(200,50);
 	boomwrong.anchor.set(0.5, 0.5);
-	target.position.set(window.innerWidth-200,50);
+	//target.position.set(window.innerWidth-200,50);
+	target.position.set(400,400);
 	target.anchor.set(0.5, 0.5);
-	//boom.rotation = 0.5;
 	
 	boom.visible = false;
 	boomwrong.visible = false;
@@ -128,22 +128,16 @@ function rocketFlight() {
 	//Move the rocket 1 pixel per frame
 	
 	if(keyUp.isDown){
-		rocket.velocity = Math.min(max_velocity, rocket.velocity+1);
+		accelerate(rocket);
 	}
 	if(keyRight.isDown){
-		rocket.angle += 0.06;
-		if(rocket.angle > 2*Math.PI){
-			rocket.angle -= (2*Math.PI);
-		}
+		steerRight(rocket);
 	}
 	if(keyLeft.isDown){
-		rocket.angle -= 0.06;
-		if(rocket.angle < 0){
-			rocket.angle += (2*Math.PI);
-		}
+		steerLeft(rocket);
 	}
 	if(keyDown.isDown){
-		rocket.velocity = Math.max(0, rocket.velocity-1);
+		decelerate(rocket);
 	}
 	
 	rocket.x += Math.cos(rocket.angle) * rocket.velocity;
@@ -153,11 +147,35 @@ function rocketFlight() {
 		
 }
 
-function resetRocket(){
-	rocket.position.set(50,window.innerHeight);
-	rocket.angle = 3*Math.PI/2;
-	rocket.velocity = 3;
+function steerRight(r){
+	r.angle += 0.06;
+	if(r.angle > 2*Math.PI){
+		r.angle -= (2*Math.PI);
+	}
 }
+
+function steerLeft(r){
+	r.angle -= 0.06;
+	if(r.angle < 0){
+		r.angle += (2*Math.PI);
+	}
+}
+
+function accelerate(r){
+	r.velocity = Math.min(max_velocity, r.velocity+1);
+}
+
+function decelerate(r){
+	r.velocity = Math.max(0, r.velocity-1);
+}
+
+function resetRocket(r){
+	r.position.set(50,window.innerHeight);
+	r.angle = 3*Math.PI/2;
+	r.velocity = 12;
+}
+
+
 
 function getVelocity(dx, dy){
 	return Math.sqrt(dx*dx + dy*dy);
@@ -195,21 +213,108 @@ function getRotation(dx, dy){
 function state(){
 	if(hitTestPointRectangle(rocket, target)){
 		boom.position.set(rocket.x, rocket.y);
+		hideBoom()
 		boom.visible = true;
 		
-		resetRocket();
+		resetRocket(rocket);
+		relocateTarget(target);
 	}else if(isOutsideBoundary(rocket, window.innerWidth, window.innerHeight, 20)){
 		boomwrong.position.set(rocket.x, rocket.y);
+		hideBoom();
 		boomwrong.visible = true;
 		
-		resetRocket();
+		resetRocket(rocket);
 	} else {
-		
+		autopilot(rocket);
 	}
 	stateFunc();
 }
 
-function idle(){}
+function idle(r){}
+
+function relocateTarget(t){
+	t.x = 300 + Math.random()*(window.innerWidth-350)
+	t.y = 50 + Math.random()*(window.innerHeight-350)
+}
+
+function autopilot(r){
+	dx = target.x - r.x;
+	dy = target.y - r.y;
+	
+	if(autopilot_ticks <= 0){
+		autopilot_ticks = 0;
+		if(dx == 0){
+			// nothing
+		} else {
+			let beta = Math.atan(dy / dx);
+			
+			if (beta < 0){
+				beta += 2*Math.PI;
+			}
+			
+			if(r.x > target.x){
+				beta += Math.PI;
+				if(beta > 2*Math.PI){
+					beta -= 2*Math.PI;
+				}
+			}
+			var correct_direction = "";
+			var pos = "";
+			
+			if(r.y > target.y){
+				//beta += Math.PI;
+				pos = "r.y > target.y";
+				
+				if( ( (beta-Math.PI) < r.angle ) && ( r.angle < beta ) ){
+					var correct_direction = "right";
+				} else {
+					var correct_direction = "left";
+				}
+			} else {
+				pos = "r.y < target.y";
+				if( ( beta < r.angle ) && ( r.angle < (beta + Math.PI) ) ){
+					var correct_direction = "left";
+				} else {
+					var correct_direction = "right";
+				}
+			}
+			
+			
+			message.text = "beta="+beta+" / angle="+r.angle+" / "+ correct_direction+" / "+pos;
+			//message.text = correct_direction;
+			
+			let random = Math.random();
+			
+			if(random < 0.8){
+				if(correct_direction === "left"){
+					steerLeft(r);
+				} else if(correct_direction === "right"){
+					steerRight(r);
+				}
+			} else if (random < 0.95) {
+				if(correct_direction === "right"){
+					steerLeft(r);
+				}  else if(correct_direction === "left") {
+					steerRight(r);
+				}
+				
+			} else {
+				// nothing
+			}
+		}
+		
+	}
+	autopilot_ticks--;
+	
+	//message.text = autopilot_ticks;
+	
+}
+
+function hideBoom(){
+	boomwrong.visible = false;
+	boom.visible = false;
+	
+}
 
 function isOutsideBoundary(r, width, height, margin){
 	if(r.x < (0+margin)) return true;
@@ -347,7 +452,7 @@ function hitTestPointRectangle(r1, r2) {
 		hit = false;
 	}
 	
-	message.text = vx+"/"+vy;
+	//message.text = vx+"/"+vy;
 
 	//`hit` will be either `true` or `false`
 	return hit;

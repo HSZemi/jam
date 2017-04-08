@@ -33,7 +33,18 @@ var root = new Container();
 var i = 0;
 
 loader
-  .add(["images/launcher.png","images/rocket_yellow.png","images/rocket_cyan.png","images/boom.png","images/target_cyan.png","images/target_yellow.png","images/boomwrong.png"])
+  .add([
+       "images/launcher.png",
+       "images/rocket_yellow.png",
+       "images/rocket_cyan.png",
+       "images/rocket_gray.png",
+       "images/boom.png",
+       "images/target_cyan.png",
+       "images/target_yellow.png",
+       "images/boomwrong.png",
+       "images/score_cyan.png",
+       "images/score_yellow.png"
+  ])
   .on("progress", loadProgressHandler)
   .load(setup);
 
@@ -61,6 +72,9 @@ function setup() {
 	rocketB= new Sprite(
 		loader.resources["images/rocket_cyan.png"].texture
 	);
+	rocketC= new Sprite(
+		loader.resources["images/rocket_gray.png"].texture
+	);
 	boomA = new Sprite(
 		loader.resources["images/boom.png"].texture
 	);
@@ -73,48 +87,75 @@ function setup() {
 	boomwrongB = new Sprite(
 		loader.resources["images/boomwrong.png"].texture
 	);
+	boomwrongC = new Sprite(
+		loader.resources["images/boomwrong.png"].texture
+	);
 	targetA = new Sprite(
 		loader.resources["images/target_yellow.png"].texture
 	);
 	targetB = new Sprite(
 		loader.resources["images/target_cyan.png"].texture
 	);
+	scoreA = new Sprite(
+		loader.resources["images/score_yellow.png"].texture
+	);
+	scoreB = new Sprite(
+		loader.resources["images/score_cyan.png"].texture
+	);
 	
 	
 	rocketA.initX = 50;
 	rocketA.initY = window.innerHeight-1;
 	
+	rocketB.initX = window.innerWidth - 50;
+	rocketB.initY = window.innerHeight-1;
+	
+	rocketC.initX = window.innerWidth/2;
+	rocketC.initY = window.innerHeight-1;
+	
 	launcherA.position.set(50,window.innerHeight);
 	launcherA.anchor.set(0.5, 1);
+	
 	rocketA.anchor.set(0.5, 0.5);
 	rocketA.position.set(rocketA.initX, rocketA.initY);
+	
 	boomA.position.set(200,50);
 	boomA.anchor.set(0.5, 0.5);
+	
 	boomwrongA.position.set(200,50);
 	boomwrongA.anchor.set(0.5, 0.5);
+	
 	targetA.position.set(400,400);
 	targetA.anchor.set(0.5, 0.5);
+	
+	scoreA.position.set((window.innerWidth/2)-120,window.innerHeight);
+	scoreA.anchor.set(0.5, 1);
 	
 	boomA.visible = false;
 	boomwrongA.visible = false;
 	
 	rocketA.angle = 3*Math.PI/2;
-	rocketA.velocity = 0;
+	rocketA.velocity = 3;
 	
 	
-	rocketB.initX = window.innerWidth - 50;
-	rocketB.initY = window.innerHeight-1;
 	
 	launcherB.position.set(window.innerWidth-50,window.innerHeight);
 	launcherB.anchor.set(0.5, 1);
+	
 	rocketB.position.set(rocketB.initX, rocketB.initY);
 	rocketB.anchor.set(0.5, 0.5);
+	
 	boomB.position.set(200,50);
 	boomB.anchor.set(0.5, 0.5);
+	
 	boomwrongB.position.set(200,50);
 	boomwrongB.anchor.set(0.5, 0.5);
+	
 	targetB.position.set(window.innerWidth-400,400);
 	targetB.anchor.set(0.5, 0.5);
+	
+	scoreB.position.set((window.innerWidth/2)+120,window.innerHeight);
+	scoreB.anchor.set(0.5, 1);
 	
 	boomB.visible = false;
 	boomwrongB.visible = false;
@@ -123,17 +164,35 @@ function setup() {
 	rocketB.velocity = 5;
 	
 	
+	rocketC.position.set(rocketC.initX, rocketC.initY);
+	rocketC.anchor.set(0.5, 0.5);
+	
+	boomwrongC.position.set(200,50);
+	boomwrongC.anchor.set(0.5, 0.5);
+	
+	boomwrongC.visible = false;
+	
+	rocketC.angle = 3*Math.PI/2;
+	rocketC.velocity = 5;
+	
+	
 	root.addChild(targetA);
 	root.addChild(rocketA);
 	root.addChild(launcherA);
 	root.addChild(boomA);
 	root.addChild(boomwrongA);
+	root.addChild(scoreA);
 	
 	root.addChild(targetB);
 	root.addChild(rocketB);
 	root.addChild(launcherB);
 	root.addChild(boomB);
 	root.addChild(boomwrongB);
+	root.addChild(scoreB);
+	
+	root.addChild(rocketC);
+	root.addChild(boomwrongC);
+	
 	
 	keyLeft= keyboard(37);
 	keyUp= keyboard(38);
@@ -141,13 +200,52 @@ function setup() {
 	keyDown= keyboard(40);
 	
 	message = new Text(
-		"Hello Pixi!",
+		"Scoreboard",
 		{fontFamily: "Arial", fontSize: 32, fill: "white"}
 	);
 	
+	rocketCountA = new Text(
+		"0",
+		{fontFamily: "Arial", fontSize: 30, fill: "white"}
+	);
+	rocketCountA.counter = 0;
+	
+	rocketCountB = new Text(
+		"0",
+		{fontFamily: "Arial", fontSize: 30, fill: "white"}
+	);
+	rocketCountB.counter = 0;
+	scoreCountA = new Text(
+		"0",
+		{fontFamily: "Arial", fontSize: 30, fill: "white", fontWeight: "bold"}
+	);
+	scoreCountA.counter = 0;
+	
+	scoreCountB = new Text(
+		"0",
+		{fontFamily: "Arial", fontSize: 30, fill: "white", fontWeight: "bold"}
+	);
+	scoreCountB.counter = 0;
+	
 	message.anchor.set(0.5,1);
 	message.position.set(window.innerWidth/2, window.innerHeight);
+	rocketCountA.anchor.set(0.5,1);
+	rocketCountA.position.set(50, window.innerHeight-5);
+	rocketCountB.anchor.set(0.5,1);
+	rocketCountB.position.set(window.innerWidth-50, window.innerHeight-5);
+	scoreCountA.anchor.set(0.5,1);
+	scoreCountA.position.set((window.innerWidth/2)-120, window.innerHeight-10);
+	scoreCountB.anchor.set(0.5,1);
+	scoreCountB.position.set((window.innerWidth/2)+120, window.innerHeight-10);
 	root.addChild(message);
+	root.addChild(rocketCountA);
+	root.addChild(rocketCountB);
+	root.addChild(scoreCountA);
+	root.addChild(scoreCountB);
+	
+	rocketA.counter = rocketCountA;
+	rocketB.counter = rocketCountB;
+	rocketC.counter = null;
 
 
 	//Tell the `renderer` to `render` the `stage`
@@ -185,6 +283,7 @@ function rocketFlight() {
 	
 	moveRocket(rocketA);
 	moveRocket(rocketB);
+	moveRocket(rocketC);
 	
 	
 	
@@ -224,6 +323,11 @@ function resetRocket(r){
 	r.position.set(r.initX, r.initY);
 	r.angle = 3*Math.PI/2;
 	r.velocity = 5;
+	
+	if(r.counter != null){
+		r.counter.counter++;
+		r.counter.text = r.counter.counter;
+	}
 }
 
 
@@ -262,22 +366,65 @@ function getRotation(dx, dy){
 }
 
 function state(){
-	// rocket a
-	if(hitTestPointRectangle(rocketA, targetA)){
+	// rocket collision
+	if(hitTestPointRectangle(rocketA, rocketC)){
+		boomwrongA.position.set(rocketA.x, rocketA.y);
+		hideBoom('A');
+		boomwrongA.visible = true;
+		resetRocket(rocketA);
+		
+		boomwrongC.position.set(rocketC.x, rocketC.y);
+		boomwrongC.visible = true;
+		resetRocket(rocketC);
+	}
+	else if(hitTestPointRectangle(rocketB, rocketC)){
+		boomwrongB.position.set(rocketB.x, rocketB.y);
+		hideBoom('B');
+		boomwrongB.visible = true;
+		resetRocket(rocketB);
+		
+		boomwrongC.position.set(rocketC.x, rocketC.y);
+		boomwrongC.visible = true;
+		resetRocket(rocketC);
+	} else {
+		autopilot(rocketC, rocketA);
+	}
+	
+	if(hitTestPointRectangle(rocketA, rocketB)){
+		boomwrongA.position.set(rocketA.x, rocketA.y);
+		hideBoom('A');
+		boomwrongA.visible = true;
+		resetRocket(rocketA);
+		
+		boomwrongB.position.set(rocketB.x, rocketB.y);
+		hideBoom('B');
+// 		boomwrongB.visible = true;
+		resetRocket(rocketB);
+		
+		scoreCountA.counter = 0;
+		scoreCountB.counter = 0;
+		updateScore(scoreCountA);
+		updateScore(scoreCountB);
+	}
+	else if(hitTestPointRectangle(rocketA, targetA)){
 		boomA.position.set(rocketA.x, rocketA.y);
 		hideBoom('A');
 		boomA.visible = true;
 		
+		scoreCountA.counter++;
+		updateScore(scoreCountA);
+		
 		resetRocket(rocketA);
 		relocateTarget(targetA);
-	}else if(isOutsideBoundary(rocketA, window.innerWidth, window.innerHeight, 20)){
+	}
+	else if(isOutsideBoundary(rocketA, window.innerWidth, window.innerHeight, 20)){
 		boomwrongA.position.set(rocketA.x, rocketA.y);
 		hideBoom('A');
 		boomwrongA.visible = true;
 		
 		resetRocket(rocketA);
 	} else {
-		// nothing
+		autopilot(rocketA, targetA);
 	}
 	
 	// rocket b
@@ -286,6 +433,9 @@ function state(){
 		hideBoom('B');
 		boomB.visible = true;
 		
+		scoreCountB.counter++;
+		updateScore(scoreCountB);
+		
 		resetRocket(rocketB);
 		relocateTarget(targetB);
 	}else if(isOutsideBoundary(rocketB, window.innerWidth, window.innerHeight, 20)){
@@ -293,12 +443,22 @@ function state(){
 		hideBoom('B');
 		boomwrongB.visible = true;
 		
+		scoreCountB.counter = 0;
+		updateScore(scoreCountB);
+		
 		resetRocket(rocketB);
+		
 	} else {
 		autopilot(rocketB, targetB);
 	}
 	
+	scoreCountA.text = scoreCountA.counter;
+	
 	stateFunc();
+}
+
+function updateScore(s){
+	s.text = s.counter;
 }
 
 function idle(r){}

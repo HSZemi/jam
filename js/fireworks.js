@@ -33,22 +33,37 @@ document.body.appendChild(renderer.view);
 var root = new Container();
 var i = 0;
 
-loader
-  .add([
-       "images/backdrop.png",
-       "images/launcher.png",
-       "images/rocket_yellow.png",
-       "images/rocket_cyan.png",
-       "images/rocket_gray.png",
-       "images/boom.png",
-       "images/target_cyan.png",
-       "images/target_yellow.png",
-       "images/boomwrong.png",
-       "images/score_cyan.png",
-       "images/score_yellow.png"
-  ])
-  .on("progress", loadProgressHandler)
-  .load(setup);
+sounds.load([
+  "sound/Rites.mp3"
+]);
+
+sounds.whenLoaded = loadGraphics;
+
+var menuMusic;
+
+function loadGraphics(){
+	
+	menuMusic = sounds["sound/Rites.mp3"];
+	
+	loader.add([
+	"images/backdrop.png",
+	"images/launcher.png",
+	"images/rocket_yellow.png",
+	"images/rocket_cyan.png",
+	"images/rocket_gray.png",
+	"images/boom.png",
+	"images/target_cyan.png",
+	"images/target_yellow.png",
+	"images/boomwrong.png",
+	"images/score_cyan.png",
+	"images/score_yellow.png",
+	"images/help.png",
+	"images/credits.png"
+	])
+	.on("progress", loadProgressHandler)
+	.load(setup);
+}
+
 
 function loadProgressHandler(loader, resource) {
 	console.log(loader.progress + " " + resource.url); 
@@ -56,10 +71,11 @@ function loadProgressHandler(loader, resource) {
 }
 
 var launcher, rocket, boom, target;
-var keyLeft, keyUp, keyRight, keyDown;
+var keyLeft, keyUp, keyRight, keyDown, keyH, keyC;
 var message;
 var max_velocity = 12;
 var autopilot_state = idle, autopilot_ticks = 30;
+var boundary = {"top":20, "bottom":window.innerHeight, "left":20, "right":window.innerWidth-20};
 
 function setup() {
 	backdrop = new Sprite(
@@ -86,13 +102,13 @@ function setup() {
 	boomB = new Sprite(
 		loader.resources["images/boom.png"].texture
 	);
-	boomwrongA = new Sprite(
+	splatA = new Sprite(
 		loader.resources["images/boomwrong.png"].texture
 	);
-	boomwrongB = new Sprite(
+	splatB = new Sprite(
 		loader.resources["images/boomwrong.png"].texture
 	);
-	boomwrongC = new Sprite(
+	splatC = new Sprite(
 		loader.resources["images/boomwrong.png"].texture
 	);
 	targetA = new Sprite(
@@ -107,10 +123,23 @@ function setup() {
 	scoreB = new Sprite(
 		loader.resources["images/score_cyan.png"].texture
 	);
+	help = new Sprite(
+		loader.resources["images/help.png"].texture
+	);
+	credits = new Sprite(
+		loader.resources["images/credits.png"].texture
+	);
 	
 	backdrop.position.set(0,0);
 	backdrop.width = window.innerWidth;
 	backdrop.height = window.innerHeight;
+	
+	help.anchor.set(0.5,0.5);
+	help.position.set(window.innerWidth/2, window.innerHeight/2);
+	
+	credits.anchor.set(0.5,0.5);
+	credits.position.set(window.innerWidth/2, window.innerHeight/2);
+	credits.visible = false;
 	
 	rocketA.initX = 50;
 	rocketA.initY = window.innerHeight-1;
@@ -130,8 +159,8 @@ function setup() {
 	boomA.position.set(200,50);
 	boomA.anchor.set(0.5, 0.5);
 	
-	boomwrongA.position.set(200,50);
-	boomwrongA.anchor.set(0.5, 0.5);
+	splatA.position.set(200,50);
+	splatA.anchor.set(0.5, 0.5);
 	
 	targetA.position.set(400,400);
 	targetA.anchor.set(0.5, 0.5);
@@ -140,10 +169,12 @@ function setup() {
 	scoreA.anchor.set(0.5, 1);
 	
 	boomA.visible = false;
-	boomwrongA.visible = false;
+	splatA.visible = false;
 	
 	rocketA.angle = 3*Math.PI/2;
 	rocketA.velocity = 3;
+	rocketA.color = 0xffcc00;
+	rocketA.respects_boundary = true;
 	
 	
 	
@@ -156,8 +187,8 @@ function setup() {
 	boomB.position.set(200,50);
 	boomB.anchor.set(0.5, 0.5);
 	
-	boomwrongB.position.set(200,50);
-	boomwrongB.anchor.set(0.5, 0.5);
+	splatB.position.set(200,50);
+	splatB.anchor.set(0.5, 0.5);
 	
 	targetB.position.set(window.innerWidth-400,400);
 	targetB.anchor.set(0.5, 0.5);
@@ -166,22 +197,25 @@ function setup() {
 	scoreB.anchor.set(0.5, 1);
 	
 	boomB.visible = false;
-	boomwrongB.visible = false;
+	splatB.visible = false;
 	
 	rocketB.angle = 3*Math.PI/2;
 	rocketB.velocity = 5;
+	rocketB.color = 0x00aad4;
+	rocketB.respects_boundary = true;
 	
 	
 	rocketC.position.set(rocketC.initX, rocketC.initY);
 	rocketC.anchor.set(0.5, 0.5);
 	
-	boomwrongC.position.set(200,50);
-	boomwrongC.anchor.set(0.5, 0.5);
+	splatC.anchor.set(0.5, 0.5);
 	
-	boomwrongC.visible = false;
+	splatC.visible = false;
 	
 	rocketC.angle = 3*Math.PI/2;
 	rocketC.velocity = 5;
+	rocketC.color = 0x483e37;
+	rocketC.respects_boundary = false;
 	
 	
 	root.addChild(backdrop);
@@ -190,24 +224,65 @@ function setup() {
 	root.addChild(rocketA);
 	root.addChild(launcherA);
 	root.addChild(boomA);
-	root.addChild(boomwrongA);
+	root.addChild(splatA);
 	root.addChild(scoreA);
 	
 	root.addChild(targetB);
 	root.addChild(rocketB);
 	root.addChild(launcherB);
 	root.addChild(boomB);
-	root.addChild(boomwrongB);
+	root.addChild(splatB);
 	root.addChild(scoreB);
 	
 	root.addChild(rocketC);
-	root.addChild(boomwrongC);
+	root.addChild(splatC);
 	
 	
 	keyLeft= keyboard(37);
 	keyUp= keyboard(38);
 	keyRight= keyboard(39);
 	keyDown= keyboard(40);
+	keyH= keyboard(72);
+	keyA= keyboard(65);
+	keyC= keyboard(67);
+	
+	keyH.press = function(){
+		credits.visible = false;
+		if(stateFunc == runGame){
+			stateFunc = idle;
+			help.visible = true;
+			menuMusic.play();
+			menuMusic.fadeIn(3);
+		} else {
+			stateFunc = runGame;
+			help.visible = false;
+			menuMusic.fadeOut(3);
+			//menuMusic.pause();
+		}
+	}
+	
+	keyC.press = function(){
+		help.visible = false;
+		if(stateFunc == runGame){
+			stateFunc = idle;
+			credits.visible = true;
+			menuMusic.play();
+			menuMusic.fadeIn(3);
+		} else {
+			stateFunc = runGame;
+			credits.visible = false;
+			menuMusic.fadeOut(3);
+			//menuMusic.pause();
+		}
+	}
+	
+	keyA.press = function(){
+		if(rocketA.autopilot_target == null){
+			rocketA.autopilot_target = targetA;
+		} else {
+			rocketA.autopilot_target = null;
+		}
+	}
 	
 	message = new Text(
 		"Scoreboard",
@@ -239,86 +314,88 @@ function setup() {
 	
 	message.anchor.set(0.5,1);
 	message.position.set(window.innerWidth/2, window.innerHeight);
+	
 	rocketCountA.anchor.set(0.5,1);
 	rocketCountA.position.set(50, window.innerHeight-5);
+	
 	rocketCountB.anchor.set(0.5,1);
 	rocketCountB.position.set(window.innerWidth-50, window.innerHeight-5);
+	
 	scoreCountA.anchor.set(0.5,1);
 	scoreCountA.position.set((window.innerWidth/2)-120, window.innerHeight-10);
+	
 	scoreCountB.anchor.set(0.5,1);
 	scoreCountB.position.set((window.innerWidth/2)+120, window.innerHeight-10);
+	
 	root.addChild(message);
 	root.addChild(rocketCountA);
 	root.addChild(rocketCountB);
 	root.addChild(scoreCountA);
 	root.addChild(scoreCountB);
+	root.addChild(help);
+	root.addChild(credits);
 	
 	rocketA.counter = rocketCountA;
 	rocketB.counter = rocketCountB;
 	rocketC.counter = null;
 	
-	rocketA.trail = Array();
-	rocketA.trailIndex = 0;
-	rocketA.trailSkip = 0;
+	rocketA.autopilot_target = null;
+	rocketB.autopilot_target = targetB;
+	rocketC.autopilot_target = rocketA;
 	
-	for(var i=0; i<10; i++){
-		var circle = new Graphics();
-		circle.beginFill(0x666666);
-		circle.drawCircle(0, 0, 1);
-		circle.endFill();
-		circle.x = 0;
-		circle.y = 0;
-		root.addChild(circle);
-		rocketA.trail.push(circle);
-	}
+	rocketA.boom = boomA;
+	rocketB.boom = boomB;
+	rocketC.boom = Object();
 	
-	rocketB.trail = Array();
-	rocketB.trailIndex = 0;
-	rocketB.trailSkip = 0;
+	rocketA.splat = splatA;
+	rocketB.splat = splatB;
+	rocketC.splat = splatC;
 	
-	for(var i=0; i<10; i++){
-		var circle = new Graphics();
-		circle.beginFill(0x666666);
-		circle.drawCircle(0, 0, 1);
-		circle.endFill();
-		circle.x = 0;
-		circle.y = 0;
-		root.addChild(circle);
-		rocketB.trail.push(circle);
-	}
+	rocketA.scorecount = scoreCountA;
+	rocketB.scorecount = scoreCountB;
+	rocketC.scorecount = Object();
 	
-	rocketC.trail = Array();
-	rocketC.trailIndex = 0;
-	rocketC.trailSkip = 0;
-	
-	for(var i=0; i<10; i++){
-		var circle = new Graphics();
-		circle.beginFill(0x666666);
-		circle.drawCircle(0, 0, 1);
-		circle.endFill();
-		circle.x = 0;
-		circle.y = 0;
-		root.addChild(circle);
-		rocketC.trail.push(circle);
-	}
-
+	addTrail(rocketA);
+	addTrail(rocketB);
+	addTrail(rocketC);
 
 	//Tell the `renderer` to `render` the `stage`
 	gameLoop();
+	
 }
 
-var stateFunc = rocketFlight;
+function addTrail(r){
+	
+	r.trail = Array();
+	r.trailIndex = 0;
+	r.trailSkip = 0;
+	
+	for(var i=0; i<10; i++){
+		var circle = new Graphics();
+		circle.beginFill(r.color);
+		circle.drawCircle(0, 0, 2);
+		circle.endFill();
+		circle.x = 0;
+		circle.y = 0;
+		circle.alpha = 0;
+		root.addChild(circle);
+		r.trail.push(circle);
+	}
+}
+
+var stateFunc = idle;
 
 function gameLoop(){
 
 	//Loop this function 60 times per second
 	requestAnimationFrame(gameLoop);
 
-	state();
+	stateFunc();
 
 	//Render the stage
 	renderer.render(root);
 }
+
 
 function rocketFlight() {
 	//Move the rocket 1 pixel per frame
@@ -340,10 +417,16 @@ function rocketFlight() {
 	moveRocket(rocketB);
 	moveRocket(rocketC);
 	
+}
+
+function getRocketBack(r){
+	dx = r.height / 2 * Math.cos(r.angle);
+	dy = r.height / 2 * Math.sin(r.angle);
 	
-	
-	//message.text = rocket.velocity;
-		
+	retval = Object();
+	retval.x = r.x - dx;
+	retval.y = r.y - dy;
+	return retval;
 }
 
 function moveRocket(r){
@@ -351,14 +434,21 @@ function moveRocket(r){
 	r.y += Math.sin(r.angle) * r.velocity;
 	r.rotation = fixRotation(r.angle);
 	
-	if(r.trailSkip > 3){
-		r.trail[r.trailIndex].x = r.x;
-		r.trail[r.trailIndex].y = r.y;
+	back = getRocketBack(r);
+	
+	if(r.trail && r.trailSkip > 3){
+		r.trail[r.trailIndex].x = back.x;
+		r.trail[r.trailIndex].y = back.y;
 		r.trailIndex++;
 		r.trailIndex %= 10;
 		r.trailSkip = 0;
+		
+		for(var i=0; i<r.trail.length; i++){
+			let idx = (r.trailIndex+i)%r.trail.length;
+			r.trail[idx].alpha = (i*0.1);
+		}
+		
 	} else {
-
 		r.trailSkip++;
 	}
 }
@@ -396,8 +486,6 @@ function resetRocket(r){
 	}
 }
 
-
-
 function getVelocity(dx, dy){
 	return Math.sqrt(dx*dx + dy*dy);
 }
@@ -431,103 +519,112 @@ function getRotation(dx, dy){
 	return rotation;
 }
 
-function state(){
+
+function runGame(){
+	collisions();
+	
+	autopilots();
+	
+	rocketFlight();
+}
+
+function collisions(){
 	// rocket collision
-	if(hitTestPointRectangle(rocketA, rocketC)){
-		boomwrongA.position.set(rocketA.x, rocketA.y);
-		hideBoom('A');
-		boomwrongA.visible = true;
-		resetRocket(rocketA);
-		
-		boomwrongC.position.set(rocketC.x, rocketC.y);
-		boomwrongC.visible = true;
-		resetRocket(rocketC);
+	if(checkRocketCollision(rocketA, rocketC)){
+		//nothing
 	}
-	else if(hitTestPointRectangle(rocketB, rocketC)){
-		boomwrongB.position.set(rocketB.x, rocketB.y);
-		hideBoom('B');
-		boomwrongB.visible = true;
-		resetRocket(rocketB);
-		
-		boomwrongC.position.set(rocketC.x, rocketC.y);
-		boomwrongC.visible = true;
-		resetRocket(rocketC);
-	} else {
-		autopilot(rocketC, rocketA);
+	if(checkRocketCollision(rocketB, rocketC)){
+		//nothing
 	}
 	
-	if(hitTestPointRectangle(rocketA, rocketB)){
-		boomwrongA.position.set(rocketA.x, rocketA.y);
-		hideBoom('A');
-		boomwrongA.visible = true;
-		resetRocket(rocketA);
-		
-		boomwrongB.position.set(rocketB.x, rocketB.y);
-		hideBoom('B');
- 		boomwrongB.visible = true;
-		resetRocket(rocketB);
-		
+	if(checkRocketCollision(rocketA, rocketB)){
 		scoreCountA.counter = 0;
 		scoreCountB.counter = 0;
 		updateScore(scoreCountA);
 		updateScore(scoreCountB);
 	}
-	else if(hitTestPointRectangle(rocketA, targetA)){
-		boomA.position.set(rocketA.x, rocketA.y);
-		hideBoom('A');
-		boomA.visible = true;
-		
-		scoreCountA.counter++;
-		updateScore(scoreCountA);
-		
-		resetRocket(rocketA);
-		relocateTarget(targetA);
+	
+	if(checkTargetCollision(rocketA, targetA)){
+		//nothing
 	}
-	else if(isOutsideBoundary(rocketA, window.innerWidth, window.innerHeight, 20)){
-		boomwrongA.position.set(rocketA.x, rocketA.y);
-		hideBoom('A');
-		boomwrongA.visible = true;
-		
-		resetRocket(rocketA);
-	} else {
-		autopilot(rocketA, targetA);
+	
+	if(checkOutsideBoundary(rocketA)){
+		//nothing
 	}
 	
 	// rocket b
-	if(hitTestPointRectangle(rocketB, targetB)){
-		boomB.position.set(rocketB.x, rocketB.y);
-		hideBoom('B');
-		boomB.visible = true;
-		
-		scoreCountB.counter++;
-		updateScore(scoreCountB);
-		
-		resetRocket(rocketB);
-		relocateTarget(targetB);
-	}else if(isOutsideBoundary(rocketB, window.innerWidth, window.innerHeight, 20)){
-		boomwrongB.position.set(rocketB.x, rocketB.y);
-		hideBoom('B');
-		boomwrongB.visible = true;
-		
-		scoreCountB.counter = 0;
-		updateScore(scoreCountB);
-		
-		resetRocket(rocketB);
-		
-	} else {
-		autopilot(rocketB, targetB);
+	if(checkTargetCollision(rocketB, targetB)){
+		//nothing
 	}
 	
-	scoreCountA.text = scoreCountA.counter;
-	
-	stateFunc();
+	if(checkOutsideBoundary(rocketB)){
+		//nothing
+	}
+}
+
+function checkOutsideBoundary(r){
+	if(isOutsideBoundary(r) && r.respects_boundary){
+		r.splat.position.set(r.x, r.y);
+		r.splat.visible = true;
+		r.boom.visible = false;
+		
+		resetRocket(r);
+		return true;
+	}
+	return false;
+}
+
+
+function checkTargetCollision(r, t){
+	if(hitTestPointRectangle(r, t)){
+
+		r.boom.position.set(r.x, r.y);
+		r.splat.visible = false;
+		r.boom.visible = true;
+		
+		r.scorecount.counter++;
+		updateScore(r.scorecount);
+		
+		resetRocket(r);
+		relocateTarget(t);
+		return true;
+	}
+	return false;
+}
+
+function checkRocketCollision(r1, r2){
+	if(hitTestPointRectangle(r1, r2)){
+		r1.splat.position.set(r1.x, r1.y);
+		r2.splat.position.set(r2.x, r2.y);
+		r1.boom.visible = false;
+		r2.boom.visible = false;
+		r1.splat.visible = true;
+		r2.splat.visible = true;
+		
+		resetRocket(r1);
+		resetRocket(r2);
+		return true;
+	}
+	return false;
+}
+
+function autopilots(){
+	if(rocketA.autopilot_target){
+		autopilot(rocketA, rocketA.autopilot_target);
+	}
+	if(rocketB.autopilot_target){
+		autopilot(rocketB, rocketB.autopilot_target);
+	}
+	if(rocketC.autopilot_target){
+		autopilot(rocketC, rocketC.autopilot_target);
+	}
 }
 
 function updateScore(s){
 	s.text = s.counter;
 }
 
-function idle(r){}
+function idle(){}
 
 function relocateTarget(t){
 	t.x = 300 + Math.random()*(window.innerWidth-350)
@@ -581,10 +678,6 @@ function autopilot(r, t){
 				}
 			}
 			
-			
-			//message.text = "beta="+beta+" / angle="+r.angle+" / "+ correct_direction+" / "+pos;
-			//message.text = correct_direction;
-			
 			let random = Math.random();
 			
 			if(random < 0.8){
@@ -608,27 +701,25 @@ function autopilot(r, t){
 	}
 	autopilot_ticks--;
 	
-	//message.text = autopilot_ticks;
-	
 }
 
 function hideBoom(c){
 	if(c==='A'){
-		boomwrongA.visible = false;
+		splatA.visible = false;
 		boomA.visible = false;
 	}
 	if(c==='B'){
-		boomwrongB.visible = false;
+		splatB.visible = false;
 		boomB.visible = false;
 	}
 	
 }
 
-function isOutsideBoundary(r, width, height, margin){
-	if(r.x < (0+margin)) return true;
-	if(r.y < (0+margin)) return true;
-	if(r.x > (width-margin)) return true;
-	if(r.y > (height)) return true;
+function isOutsideBoundary(r){
+	if(r.x < (boundary.left)) return true;
+	if(r.y < (boundary.top)) return true;
+	if(r.x > (boundary.right)) return true;
+	if(r.y > (boundary.bottom)) return true;
 	return false;
 }
 
@@ -759,8 +850,6 @@ function hitTestPointRectangle(r1, r2) {
 		//There's no collision on the x axis
 		hit = false;
 	}
-	
-	//message.text = vx+"/"+vy;
 
 	//`hit` will be either `true` or `false`
 	return hit;

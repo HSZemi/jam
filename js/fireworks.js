@@ -3,8 +3,9 @@ var Container = PIXI.Container,
     autoDetectRenderer = PIXI.autoDetectRenderer,
     loader = PIXI.loader,
     resources = PIXI.loader.resources,
-    Sprite = PIXI.Sprite;
-    Text = PIXI.Text;
+    Sprite = PIXI.Sprite,
+    Text = PIXI.Text,
+    Graphics = PIXI.Graphics;
 
 
 
@@ -34,6 +35,7 @@ var i = 0;
 
 loader
   .add([
+       "images/backdrop.png",
        "images/launcher.png",
        "images/rocket_yellow.png",
        "images/rocket_cyan.png",
@@ -60,6 +62,9 @@ var max_velocity = 12;
 var autopilot_state = idle, autopilot_ticks = 30;
 
 function setup() {
+	backdrop = new Sprite(
+		loader.resources["images/backdrop.png"].texture
+	);
 	launcherA = new Sprite(
 		loader.resources["images/launcher.png"].texture
 	);
@@ -103,6 +108,9 @@ function setup() {
 		loader.resources["images/score_cyan.png"].texture
 	);
 	
+	backdrop.position.set(0,0);
+	backdrop.width = window.innerWidth;
+	backdrop.height = window.innerHeight;
 	
 	rocketA.initX = 50;
 	rocketA.initY = window.innerHeight-1;
@@ -176,6 +184,8 @@ function setup() {
 	rocketC.velocity = 5;
 	
 	
+	root.addChild(backdrop);
+	
 	root.addChild(targetA);
 	root.addChild(rocketA);
 	root.addChild(launcherA);
@@ -246,6 +256,51 @@ function setup() {
 	rocketA.counter = rocketCountA;
 	rocketB.counter = rocketCountB;
 	rocketC.counter = null;
+	
+	rocketA.trail = Array();
+	rocketA.trailIndex = 0;
+	rocketA.trailSkip = 0;
+	
+	for(var i=0; i<10; i++){
+		var circle = new Graphics();
+		circle.beginFill(0x666666);
+		circle.drawCircle(0, 0, 1);
+		circle.endFill();
+		circle.x = 0;
+		circle.y = 0;
+		root.addChild(circle);
+		rocketA.trail.push(circle);
+	}
+	
+	rocketB.trail = Array();
+	rocketB.trailIndex = 0;
+	rocketB.trailSkip = 0;
+	
+	for(var i=0; i<10; i++){
+		var circle = new Graphics();
+		circle.beginFill(0x666666);
+		circle.drawCircle(0, 0, 1);
+		circle.endFill();
+		circle.x = 0;
+		circle.y = 0;
+		root.addChild(circle);
+		rocketB.trail.push(circle);
+	}
+	
+	rocketC.trail = Array();
+	rocketC.trailIndex = 0;
+	rocketC.trailSkip = 0;
+	
+	for(var i=0; i<10; i++){
+		var circle = new Graphics();
+		circle.beginFill(0x666666);
+		circle.drawCircle(0, 0, 1);
+		circle.endFill();
+		circle.x = 0;
+		circle.y = 0;
+		root.addChild(circle);
+		rocketC.trail.push(circle);
+	}
 
 
 	//Tell the `renderer` to `render` the `stage`
@@ -295,6 +350,17 @@ function moveRocket(r){
 	r.x += Math.cos(r.angle) * r.velocity;
 	r.y += Math.sin(r.angle) * r.velocity;
 	r.rotation = fixRotation(r.angle);
+	
+	if(r.trailSkip > 3){
+		r.trail[r.trailIndex].x = r.x;
+		r.trail[r.trailIndex].y = r.y;
+		r.trailIndex++;
+		r.trailIndex %= 10;
+		r.trailSkip = 0;
+	} else {
+
+		r.trailSkip++;
+	}
 }
 
 function steerRight(r){
@@ -398,7 +464,7 @@ function state(){
 		
 		boomwrongB.position.set(rocketB.x, rocketB.y);
 		hideBoom('B');
-// 		boomwrongB.visible = true;
+ 		boomwrongB.visible = true;
 		resetRocket(rocketB);
 		
 		scoreCountA.counter = 0;
@@ -492,21 +558,26 @@ function autopilot(r, t){
 			var correct_direction = "";
 			var pos = "";
 			
-			if(r.y > t.y){
-				//beta += Math.PI;
-				pos = "r.y > t.y";
-				
-				if( ( (beta-Math.PI) < r.angle ) && ( r.angle < beta ) ){
-					var correct_direction = "right";
-				} else {
-					var correct_direction = "left";
-				}
+			if(Math.abs(beta-r.angle) < 0.1){
+				correct_direction = "straight";
 			} else {
-				pos = "r.y < t.y";
-				if( ( beta < r.angle ) && ( r.angle < (beta + Math.PI) ) ){
-					var correct_direction = "left";
+			
+				if(r.y > t.y){
+					//beta += Math.PI;
+					pos = "r.y > t.y";
+					
+					if( ( (beta-Math.PI) < r.angle ) && ( r.angle < beta ) ){
+						var correct_direction = "right";
+					} else {
+						var correct_direction = "left";
+					}
 				} else {
-					var correct_direction = "right";
+					pos = "r.y < t.y";
+					if( ( beta < r.angle ) && ( r.angle < (beta + Math.PI) ) ){
+						var correct_direction = "left";
+					} else {
+						var correct_direction = "right";
+					}
 				}
 			}
 			
@@ -517,7 +588,7 @@ function autopilot(r, t){
 			let random = Math.random();
 			
 			if(random < 0.8){
-				if(correct_direction === "left"){
+				if(correct_direction === "left" || correct_direction === "straight"){
 					steerLeft(r);
 				} else if(correct_direction === "right"){
 					steerRight(r);
@@ -525,7 +596,7 @@ function autopilot(r, t){
 			} else if (random < 0.95) {
 				if(correct_direction === "right"){
 					steerLeft(r);
-				}  else if(correct_direction === "left") {
+				}  else if(correct_direction === "left" || correct_direction === "straight") {
 					steerRight(r);
 				}
 				

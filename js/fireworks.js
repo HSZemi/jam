@@ -33,7 +33,7 @@ var root = new Container();
 var i = 0;
 
 loader
-  .add(["images/launcher.png","images/rocket.png","images/boom.png","images/target.png","images/boomwrong.png"])
+  .add(["images/launcher.png","images/rocket_yellow.png","images/rocket_cyan.png","images/boom.png","images/target_cyan.png","images/target_yellow.png","images/boomwrong.png"])
   .on("progress", loadProgressHandler)
   .load(setup);
 
@@ -49,48 +49,91 @@ var max_velocity = 12;
 var autopilot_state = idle, autopilot_ticks = 30;
 
 function setup() {
-	launcher = new Sprite(
+	launcherA = new Sprite(
 		loader.resources["images/launcher.png"].texture
 	);
-	rocket= new Sprite(
-		loader.resources["images/rocket.png"].texture
+	launcherB = new Sprite(
+		loader.resources["images/launcher.png"].texture
 	);
-	boom = new Sprite(
+	rocketA= new Sprite(
+		loader.resources["images/rocket_yellow.png"].texture
+	);
+	rocketB= new Sprite(
+		loader.resources["images/rocket_cyan.png"].texture
+	);
+	boomA = new Sprite(
 		loader.resources["images/boom.png"].texture
 	);
-	boomwrong = new Sprite(
+	boomB = new Sprite(
+		loader.resources["images/boom.png"].texture
+	);
+	boomwrongA = new Sprite(
 		loader.resources["images/boomwrong.png"].texture
 	);
-	target = new Sprite(
-		loader.resources["images/target.png"].texture
+	boomwrongB = new Sprite(
+		loader.resources["images/boomwrong.png"].texture
+	);
+	targetA = new Sprite(
+		loader.resources["images/target_yellow.png"].texture
+	);
+	targetB = new Sprite(
+		loader.resources["images/target_cyan.png"].texture
 	);
 	
-	launcher.position.set(50,window.innerHeight);
-	launcher.anchor.set(0.5, 1);
-	rocket.position.set(50,window.innerHeight);
-	rocket.anchor.set(0.5, 0.5);
-	boom.position.set(200,50);
-	boom.anchor.set(0.5, 0.5);
-	boomwrong.position.set(200,50);
-	boomwrong.anchor.set(0.5, 0.5);
-	//target.position.set(window.innerWidth-200,50);
-	target.position.set(400,400);
-	target.anchor.set(0.5, 0.5);
 	
-	boom.visible = false;
-	boomwrong.visible = false;
+	rocketA.initX = 50;
+	rocketA.initY = window.innerHeight-1;
 	
-	rocket.vx = 0;
-	rocket.vy = 0;
-	rocket.angle = 3*Math.PI/2;
-	rocket.velocity = 0;
+	launcherA.position.set(50,window.innerHeight);
+	launcherA.anchor.set(0.5, 1);
+	rocketA.anchor.set(0.5, 0.5);
+	rocketA.position.set(rocketA.initX, rocketA.initY);
+	boomA.position.set(200,50);
+	boomA.anchor.set(0.5, 0.5);
+	boomwrongA.position.set(200,50);
+	boomwrongA.anchor.set(0.5, 0.5);
+	targetA.position.set(400,400);
+	targetA.anchor.set(0.5, 0.5);
+	
+	boomA.visible = false;
+	boomwrongA.visible = false;
+	
+	rocketA.angle = 3*Math.PI/2;
+	rocketA.velocity = 0;
 	
 	
-	root.addChild(target);
-	root.addChild(rocket);
-	root.addChild(launcher);
-	root.addChild(boom);
-	root.addChild(boomwrong);
+	rocketB.initX = window.innerWidth - 50;
+	rocketB.initY = window.innerHeight-1;
+	
+	launcherB.position.set(window.innerWidth-50,window.innerHeight);
+	launcherB.anchor.set(0.5, 1);
+	rocketB.position.set(rocketB.initX, rocketB.initY);
+	rocketB.anchor.set(0.5, 0.5);
+	boomB.position.set(200,50);
+	boomB.anchor.set(0.5, 0.5);
+	boomwrongB.position.set(200,50);
+	boomwrongB.anchor.set(0.5, 0.5);
+	targetB.position.set(window.innerWidth-400,400);
+	targetB.anchor.set(0.5, 0.5);
+	
+	boomB.visible = false;
+	boomwrongB.visible = false;
+	
+	rocketB.angle = 3*Math.PI/2;
+	rocketB.velocity = 5;
+	
+	
+	root.addChild(targetA);
+	root.addChild(rocketA);
+	root.addChild(launcherA);
+	root.addChild(boomA);
+	root.addChild(boomwrongA);
+	
+	root.addChild(targetB);
+	root.addChild(rocketB);
+	root.addChild(launcherB);
+	root.addChild(boomB);
+	root.addChild(boomwrongB);
 	
 	keyLeft= keyboard(37);
 	keyUp= keyboard(38);
@@ -102,8 +145,8 @@ function setup() {
 		{fontFamily: "Arial", fontSize: 32, fill: "white"}
 	);
 	
-	message.anchor.set(1,1);
-	message.position.set(window.innerWidth, window.innerHeight);
+	message.anchor.set(0.5,1);
+	message.position.set(window.innerWidth/2, window.innerHeight);
 	root.addChild(message);
 
 
@@ -128,23 +171,31 @@ function rocketFlight() {
 	//Move the rocket 1 pixel per frame
 	
 	if(keyUp.isDown){
-		accelerate(rocket);
+		accelerate(rocketA);
 	}
 	if(keyRight.isDown){
-		steerRight(rocket);
+		steerRight(rocketA);
 	}
 	if(keyLeft.isDown){
-		steerLeft(rocket);
+		steerLeft(rocketA);
 	}
 	if(keyDown.isDown){
-		decelerate(rocket);
+		decelerate(rocketA);
 	}
 	
-	rocket.x += Math.cos(rocket.angle) * rocket.velocity;
-	rocket.y += Math.sin(rocket.angle) * rocket.velocity;
-	rocket.rotation = fixRotation(rocket.angle);
+	moveRocket(rocketA);
+	moveRocket(rocketB);
+	
+	
+	
 	//message.text = rocket.velocity;
 		
+}
+
+function moveRocket(r){
+	r.x += Math.cos(r.angle) * r.velocity;
+	r.y += Math.sin(r.angle) * r.velocity;
+	r.rotation = fixRotation(r.angle);
 }
 
 function steerRight(r){
@@ -170,9 +221,9 @@ function decelerate(r){
 }
 
 function resetRocket(r){
-	r.position.set(50,window.innerHeight);
+	r.position.set(r.initX, r.initY);
 	r.angle = 3*Math.PI/2;
-	r.velocity = 12;
+	r.velocity = 5;
 }
 
 
@@ -211,22 +262,42 @@ function getRotation(dx, dy){
 }
 
 function state(){
-	if(hitTestPointRectangle(rocket, target)){
-		boom.position.set(rocket.x, rocket.y);
-		hideBoom()
-		boom.visible = true;
+	// rocket a
+	if(hitTestPointRectangle(rocketA, targetA)){
+		boomA.position.set(rocketA.x, rocketA.y);
+		hideBoom('A');
+		boomA.visible = true;
 		
-		resetRocket(rocket);
-		relocateTarget(target);
-	}else if(isOutsideBoundary(rocket, window.innerWidth, window.innerHeight, 20)){
-		boomwrong.position.set(rocket.x, rocket.y);
-		hideBoom();
-		boomwrong.visible = true;
+		resetRocket(rocketA);
+		relocateTarget(targetA);
+	}else if(isOutsideBoundary(rocketA, window.innerWidth, window.innerHeight, 20)){
+		boomwrongA.position.set(rocketA.x, rocketA.y);
+		hideBoom('A');
+		boomwrongA.visible = true;
 		
-		resetRocket(rocket);
+		resetRocket(rocketA);
 	} else {
-		autopilot(rocket);
+		// nothing
 	}
+	
+	// rocket b
+	if(hitTestPointRectangle(rocketB, targetB)){
+		boomB.position.set(rocketB.x, rocketB.y);
+		hideBoom('B');
+		boomB.visible = true;
+		
+		resetRocket(rocketB);
+		relocateTarget(targetB);
+	}else if(isOutsideBoundary(rocketB, window.innerWidth, window.innerHeight, 20)){
+		boomwrongB.position.set(rocketB.x, rocketB.y);
+		hideBoom('B');
+		boomwrongB.visible = true;
+		
+		resetRocket(rocketB);
+	} else {
+		autopilot(rocketB, targetB);
+	}
+	
 	stateFunc();
 }
 
@@ -237,9 +308,9 @@ function relocateTarget(t){
 	t.y = 50 + Math.random()*(window.innerHeight-350)
 }
 
-function autopilot(r){
-	dx = target.x - r.x;
-	dy = target.y - r.y;
+function autopilot(r, t){
+	dx = t.x - r.x;
+	dy = t.y - r.y;
 	
 	if(autopilot_ticks <= 0){
 		autopilot_ticks = 0;
@@ -252,7 +323,7 @@ function autopilot(r){
 				beta += 2*Math.PI;
 			}
 			
-			if(r.x > target.x){
+			if(r.x > t.x){
 				beta += Math.PI;
 				if(beta > 2*Math.PI){
 					beta -= 2*Math.PI;
@@ -261,9 +332,9 @@ function autopilot(r){
 			var correct_direction = "";
 			var pos = "";
 			
-			if(r.y > target.y){
+			if(r.y > t.y){
 				//beta += Math.PI;
-				pos = "r.y > target.y";
+				pos = "r.y > t.y";
 				
 				if( ( (beta-Math.PI) < r.angle ) && ( r.angle < beta ) ){
 					var correct_direction = "right";
@@ -271,7 +342,7 @@ function autopilot(r){
 					var correct_direction = "left";
 				}
 			} else {
-				pos = "r.y < target.y";
+				pos = "r.y < t.y";
 				if( ( beta < r.angle ) && ( r.angle < (beta + Math.PI) ) ){
 					var correct_direction = "left";
 				} else {
@@ -280,7 +351,7 @@ function autopilot(r){
 			}
 			
 			
-			message.text = "beta="+beta+" / angle="+r.angle+" / "+ correct_direction+" / "+pos;
+			//message.text = "beta="+beta+" / angle="+r.angle+" / "+ correct_direction+" / "+pos;
 			//message.text = correct_direction;
 			
 			let random = Math.random();
@@ -310,9 +381,15 @@ function autopilot(r){
 	
 }
 
-function hideBoom(){
-	boomwrong.visible = false;
-	boom.visible = false;
+function hideBoom(c){
+	if(c==='A'){
+		boomwrongA.visible = false;
+		boomA.visible = false;
+	}
+	if(c==='B'){
+		boomwrongB.visible = false;
+		boomB.visible = false;
+	}
 	
 }
 

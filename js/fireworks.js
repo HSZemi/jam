@@ -39,6 +39,8 @@ message.position.set(window.innerWidth/2, window.innerHeight);
 root.addChild(message);
 
 var menuMusic, gameMusic, creditsMusic, winMusic, loseMusic, commentsGood=Array(), commentsBad=Array();
+var commentCooldownDefault = 30*4;
+var commentCooldown = commentCooldownDefault;
 
 function startGame(){
 	document.getElementById("intro").remove();
@@ -51,7 +53,18 @@ function startGame(){
 	"sound/Winner Winner.mp3",
 	"sound/Hamster March.mp3",
 	"sound/bingo2.mp3",
-	"sound/bingo3.mp3"
+	"sound/bingo3.mp3",
+	"sound/sad.mp3",
+	"sound/ohhhh.mp3",
+	"sound/noise.mp3",
+	"sound/hui.mp3",
+	"sound/poof.mp3",
+	"sound/hmmm.mp3",
+	"sound/great.mp3",
+	"sound/fantastic.mp3",
+	"sound/boring.mp3",
+	"sound/ahhh.mp3",
+	"sound/rekt.mp3"
 	]);
 
 	sounds.whenLoaded = loadGraphics;
@@ -65,8 +78,8 @@ function loadGraphics(){
 	winMusic = sounds["sound/Hamster March.mp3"];
 	loseMusic = sounds["sound/Winner Winner.mp3"];
 	
-	commentsGood.push(sounds["sound/bingo3.mp3"]);
-	commentsBad.push(sounds["sound/bingo2.mp3"]);
+	commentsGood.push(sounds["sound/bingo3.mp3"],sounds["sound/bingo2.mp3"],sounds["sound/ohhhh.mp3"],sounds["sound/hui.mp3"],sounds["sound/great.mp3"],sounds["sound/fantastic.mp3"],sounds["sound/ahhh.mp3"]);
+	commentsBad.push(sounds["sound/sad.mp3"],sounds["sound/hmmm.mp3"],sounds["sound/boring.mp3"],sounds["sound/rekt.mp3"]);
 	
 	gameMusic.loop = true;
 	menuMusic.loop = true;
@@ -658,6 +671,9 @@ function runGame(){
 	explosions();
 	
 	checkWin();
+	
+	commentCooldown -= 1;
+	
 }
 
 function explosions(){
@@ -671,7 +687,9 @@ function explosions(){
 	
 	for(var i=0; i<to_remove.length; i++){
 		let removed = animatronix.splice(to_remove[i], to_remove[i]);
-		root.removeChild(removed[0]);
+		for(var j=0; j<removed.length; j++){
+			root.removeChild(removed[j]);
+		}
 	}
 }
 
@@ -691,6 +709,16 @@ function explode(b){
 			return false;
 		}
 	}
+	return false;
+}
+
+function launchComment(c, force=false){
+	if(force || ((commentCooldown < 0) && (Math.random() < 0.5))){
+		setTimeout(function(){
+			c.play();
+		}, 400);
+		commentCooldown = commentCooldownDefault;
+	}
 }
 
 function collisions(){
@@ -698,9 +726,7 @@ function collisions(){
 	if(checkRocketCollision(rocketA, rocketC)){
 		//nothing
 		explosionSound();
-// 		setTimeout(function(){
-// 			choose(commentsBad).play();
-// 		}, 1000);
+		launchComment(choose(commentsBad));
 	}
 	if(checkRocketCollision(rocketB, rocketC)){
 		//nothing
@@ -718,17 +744,15 @@ function collisions(){
 	if(checkTargetCollision(rocketA, targetA)){
 		//nothing
 		jumpSound();
-// 		setTimeout(function(){
-// 			choose(commentsGood).play();
-// 		}, 1000);
+		launchComment(choose(commentsGood));
 	}
 	
 	if(checkOutsideBoundary(rocketA)){
 		//nothing
-		explosionSound();
-// 		setTimeout(function(){
-// 			choose(commentsBad).play();
-// 		}, 1000);
+		//explosionSound();
+		sounds["sound/poof.mp3"].play();
+ 		launchComment(choose(commentsBad));
+
 	}
 	
 	// rocket b
@@ -739,7 +763,8 @@ function collisions(){
 	
 	if(checkOutsideBoundary(rocketB)){
 		//nothing
-		explosionSound();
+		//explosionSound();
+		sounds["sound/poof.mp3"].play();
 	}
 }
 
@@ -823,12 +848,17 @@ function autopilots(){
 function checkWin(){
 	if(scoreCountA.counter > 10){
 		win.visible = true;
-		stateFunc = idle;
+		for(var i=0; i<20; i++){
+			placeRandomFireworks();
+		}
+		stateFunc = finishAnimations;
+		launchComment(choose(commentsGood), true);
 		switchToWinMusic();
 	}
 	if(scoreCountB.counter > 10){
 		lose.visible = true;
-		stateFunc = idle;
+		stateFunc = finishAnimations;
+		launchComment(choose(commentsBad), true);
 		switchToLoseMusic();
 	}
 }
@@ -837,7 +867,31 @@ function updateScore(s){
 	s.text = s.counter;
 }
 
+function placeRandomFireworks(){
+	x = 300 + Math.random()*(window.innerWidth-300);
+	y = 300 + Math.random()*(window.innerHeight-300);
+	
+	let boom = choose(rocketA.boom);
+	let sprite = new Sprite(boom);
+	sprite.anchor.set(0.5,0.5);
+	root.addChild(sprite);
+		
+	sprite.position.set(x, y);
+		
+		
+	animatronix.push(sprite);
+	
+}
+
 function idle(){}
+
+function finishAnimations(){
+	explosions();
+	
+	if(animatronix.length < 1){
+		stateFunc = idle;
+	}
+}
 
 function restart(){
 	if(!(win.visible || lose.visible)){

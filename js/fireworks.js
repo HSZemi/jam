@@ -14,8 +14,6 @@ if(!PIXI.utils.isWebGLSupported()){
 	type = "canvas";
 }
 
-PIXI.utils.sayHello(type);
-
 //Create the renderer
 var renderer = autoDetectRenderer(256, 256, {antialias: false, transparent: false, resolution: 1});
 
@@ -27,23 +25,44 @@ renderer.autoResize = true;
 renderer.resize(window.innerWidth, window.innerHeight);
 
 //Add the canvas to the HTML document
-document.body.appendChild(renderer.view);
 
 //Create a container object called the `stage`
 var root = new Container();
-var i = 0;
 
-sounds.load([
-  "sound/Rites.mp3"
-]);
+var message = new Text(
+	"Scoreboard",
+	{fontFamily: "Arial", fontSize: 32, fill: "white"}
+);
 
-sounds.whenLoaded = loadGraphics;
+message.anchor.set(0.5,1);
+message.position.set(window.innerWidth/2, window.innerHeight);
+root.addChild(message);
 
-var menuMusic;
+var menuMusic, gameMusic, creditsMusic;
+
+function startGame(){
+	document.getElementById("intro").remove();
+	
+	document.body.appendChild(renderer.view);
+	sounds.load([
+	"sound/Rites.mp3",
+	"sound/Cyborg Ninja.mp3",
+	"sound/Rocket.mp3"
+	]);
+
+	sounds.whenLoaded = loadGraphics;
+}
 
 function loadGraphics(){
 	
 	menuMusic = sounds["sound/Rites.mp3"];
+	gameMusic = sounds["sound/Cyborg Ninja.mp3"];
+	creditsMusic = sounds["sound/Rocket.mp3"];
+	
+	gameMusic.volume = 0.3;
+	gameMusic.loop = true;
+	menuMusic.loop = true;
+	creditsMusic.loop = true;
 	
 	loader.add([
 	"images/backdrop.png",
@@ -51,14 +70,20 @@ function loadGraphics(){
 	"images/rocket_yellow.png",
 	"images/rocket_cyan.png",
 	"images/rocket_gray.png",
-	"images/boom.png",
+	"images/boom01.png",
+	"images/boom02.png",
+	"images/boom03.png",
+	"images/boom04.png",
+	"images/boom05.png",
 	"images/target_cyan.png",
 	"images/target_yellow.png",
 	"images/boomwrong.png",
 	"images/score_cyan.png",
 	"images/score_yellow.png",
 	"images/help.png",
-	"images/credits.png"
+	"images/credits.png",
+	"images/win.png",
+	"images/lose.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -66,20 +91,25 @@ function loadGraphics(){
 
 
 function loadProgressHandler(loader, resource) {
-	console.log(loader.progress + " " + resource.url); 
-	i++;
+	message.text = "loading " + resource.url + " ("+Math.round(loader.progress)+"% completed)"; 
+	renderer.render(root);
 }
 
-var launcher, rocket, boom, target;
-var keyLeft, keyUp, keyRight, keyDown, keyH, keyC;
-var message;
+var launcher, rocket, boom, target, scoreboard;
+var keyLeft, keyUp, keyRight, keyDown, keyH, keyC, keyM, keyR;
 var max_velocity = 12;
 var autopilot_state = idle, autopilot_ticks = 30;
 var boundary = {"top":20, "bottom":window.innerHeight, "left":20, "right":window.innerWidth-20};
+var musicToggle = false;
+var animatronix = Array();
 
 function setup() {
 	backdrop = new Sprite(
 		loader.resources["images/backdrop.png"].texture
+	);
+	scoreboard = new Text(
+		"Scoreboard",
+		{fontFamily: "Arial", fontSize: 32, fill: "white"}
 	);
 	launcherA = new Sprite(
 		loader.resources["images/launcher.png"].texture
@@ -96,21 +126,42 @@ function setup() {
 	rocketC= new Sprite(
 		loader.resources["images/rocket_gray.png"].texture
 	);
-	boomA = new Sprite(
-		loader.resources["images/boom.png"].texture
+	boomA = new Array();
+	boomA.push(
+		loader.resources["images/boom01.png"].texture
 	);
-	boomB = new Sprite(
-		loader.resources["images/boom.png"].texture
+	boomA.push(
+		loader.resources["images/boom02.png"].texture
 	);
-	splatA = new Sprite(
-		loader.resources["images/boomwrong.png"].texture
+	boomA.push(
+		loader.resources["images/boom03.png"].texture
 	);
-	splatB = new Sprite(
-		loader.resources["images/boomwrong.png"].texture
+	boomA.push(
+		loader.resources["images/boom04.png"].texture
 	);
-	splatC = new Sprite(
-		loader.resources["images/boomwrong.png"].texture
+	boomA.push(
+		loader.resources["images/boom05.png"].texture
 	);
+	boomB = new Array();
+	boomB.push(
+		loader.resources["images/boom01.png"].texture
+	);
+	boomB.push(
+		loader.resources["images/boom02.png"].texture
+	);
+	boomB.push(
+		loader.resources["images/boom03.png"].texture
+	);
+	boomB.push(
+		loader.resources["images/boom04.png"].texture
+	);
+	boomB.push(
+		loader.resources["images/boom05.png"].texture
+	);
+	splatA = loader.resources["images/boomwrong.png"].texture;
+	splatB = loader.resources["images/boomwrong.png"].texture;
+	splatC = loader.resources["images/boomwrong.png"].texture;
+	
 	targetA = new Sprite(
 		loader.resources["images/target_yellow.png"].texture
 	);
@@ -129,10 +180,19 @@ function setup() {
 	credits = new Sprite(
 		loader.resources["images/credits.png"].texture
 	);
+	win = new Sprite(
+		loader.resources["images/win.png"].texture
+	);
+	lose = new Sprite(
+		loader.resources["images/lose.png"].texture
+	);
 	
 	backdrop.position.set(0,0);
 	backdrop.width = window.innerWidth;
 	backdrop.height = window.innerHeight;
+	
+	scoreboard.anchor.set(0.5,1);
+	scoreboard.position.set(window.innerWidth/2, window.innerHeight);
 	
 	help.anchor.set(0.5,0.5);
 	help.position.set(window.innerWidth/2, window.innerHeight/2);
@@ -140,6 +200,14 @@ function setup() {
 	credits.anchor.set(0.5,0.5);
 	credits.position.set(window.innerWidth/2, window.innerHeight/2);
 	credits.visible = false;
+	
+	win.anchor.set(0.5,0.5);
+	win.position.set(window.innerWidth/2, window.innerHeight/2);
+	win.visible = false;
+	
+	lose.anchor.set(0.5,0.5);
+	lose.position.set(window.innerWidth/2, window.innerHeight/2);
+	lose.visible = false;
 	
 	rocketA.initX = 50;
 	rocketA.initY = window.innerHeight-1;
@@ -155,21 +223,15 @@ function setup() {
 	
 	rocketA.anchor.set(0.5, 0.5);
 	rocketA.position.set(rocketA.initX, rocketA.initY);
+
 	
-	boomA.position.set(200,50);
-	boomA.anchor.set(0.5, 0.5);
-	
-	splatA.position.set(200,50);
-	splatA.anchor.set(0.5, 0.5);
-	
-	targetA.position.set(400,400);
+	targetA.initX = 400;
+	targetA.initY = 400;
+	resetTarget(targetA);
 	targetA.anchor.set(0.5, 0.5);
 	
 	scoreA.position.set((window.innerWidth/2)-120,window.innerHeight);
 	scoreA.anchor.set(0.5, 1);
-	
-	boomA.visible = false;
-	splatA.visible = false;
 	
 	rocketA.angle = 3*Math.PI/2;
 	rocketA.velocity = 3;
@@ -184,20 +246,13 @@ function setup() {
 	rocketB.position.set(rocketB.initX, rocketB.initY);
 	rocketB.anchor.set(0.5, 0.5);
 	
-	boomB.position.set(200,50);
-	boomB.anchor.set(0.5, 0.5);
-	
-	splatB.position.set(200,50);
-	splatB.anchor.set(0.5, 0.5);
-	
-	targetB.position.set(window.innerWidth-400,400);
+	targetB.initX = window.innerWidth-400;
+	targetB.initY = 400;
+	resetTarget(targetB);
 	targetB.anchor.set(0.5, 0.5);
 	
 	scoreB.position.set((window.innerWidth/2)+120,window.innerHeight);
 	scoreB.anchor.set(0.5, 1);
-	
-	boomB.visible = false;
-	splatB.visible = false;
 	
 	rocketB.angle = 3*Math.PI/2;
 	rocketB.velocity = 5;
@@ -207,10 +262,6 @@ function setup() {
 	
 	rocketC.position.set(rocketC.initX, rocketC.initY);
 	rocketC.anchor.set(0.5, 0.5);
-	
-	splatC.anchor.set(0.5, 0.5);
-	
-	splatC.visible = false;
 	
 	rocketC.angle = 3*Math.PI/2;
 	rocketC.velocity = 5;
@@ -223,19 +274,18 @@ function setup() {
 	root.addChild(targetA);
 	root.addChild(rocketA);
 	root.addChild(launcherA);
-	root.addChild(boomA);
-	root.addChild(splatA);
+
 	root.addChild(scoreA);
 	
 	root.addChild(targetB);
 	root.addChild(rocketB);
 	root.addChild(launcherB);
-	root.addChild(boomB);
-	root.addChild(splatB);
+
 	root.addChild(scoreB);
 	
 	root.addChild(rocketC);
-	root.addChild(splatC);
+	
+	root.addChild(scoreboard);
 	
 	
 	keyLeft= keyboard(37);
@@ -245,19 +295,19 @@ function setup() {
 	keyH= keyboard(72);
 	keyA= keyboard(65);
 	keyC= keyboard(67);
+	keyM= keyboard(77);
+	keyR= keyboard(82);
 	
 	keyH.press = function(){
 		credits.visible = false;
 		if(stateFunc == runGame){
 			stateFunc = idle;
 			help.visible = true;
-			menuMusic.play();
-			menuMusic.fadeIn(3);
+			switchToMenuMusic();
 		} else {
 			stateFunc = runGame;
 			help.visible = false;
-			menuMusic.fadeOut(3);
-			//menuMusic.pause();
+			switchToGameMusic();
 		}
 	}
 	
@@ -266,13 +316,11 @@ function setup() {
 		if(stateFunc == runGame){
 			stateFunc = idle;
 			credits.visible = true;
-			menuMusic.play();
-			menuMusic.fadeIn(3);
+			switchToCreditsMusic();
 		} else {
 			stateFunc = runGame;
 			credits.visible = false;
-			menuMusic.fadeOut(3);
-			//menuMusic.pause();
+			switchToGameMusic();
 		}
 	}
 	
@@ -284,10 +332,15 @@ function setup() {
 		}
 	}
 	
-	message = new Text(
-		"Scoreboard",
-		{fontFamily: "Arial", fontSize: 32, fill: "white"}
-	);
+	keyM.press = function(){
+		console.log("M");
+	}
+	
+	keyR.press = function(){
+		restart();
+	}
+	
+	asdfjiadfadsf();
 	
 	rocketCountA = new Text(
 		"0",
@@ -312,8 +365,7 @@ function setup() {
 	);
 	scoreCountB.counter = 0;
 	
-	message.anchor.set(0.5,1);
-	message.position.set(window.innerWidth/2, window.innerHeight);
+	
 	
 	rocketCountA.anchor.set(0.5,1);
 	rocketCountA.position.set(50, window.innerHeight-5);
@@ -327,13 +379,14 @@ function setup() {
 	scoreCountB.anchor.set(0.5,1);
 	scoreCountB.position.set((window.innerWidth/2)+120, window.innerHeight-10);
 	
-	root.addChild(message);
 	root.addChild(rocketCountA);
 	root.addChild(rocketCountB);
 	root.addChild(scoreCountA);
 	root.addChild(scoreCountB);
 	root.addChild(help);
 	root.addChild(credits);
+	root.addChild(win);
+	root.addChild(lose);
 	
 	rocketA.counter = rocketCountA;
 	rocketB.counter = rocketCountB;
@@ -346,6 +399,9 @@ function setup() {
 	rocketA.boom = boomA;
 	rocketB.boom = boomB;
 	rocketC.boom = Object();
+	rocketA.activeboom = null;
+	rocketB.activeboom = null;
+	rocketC.activeboom = null;
 	
 	rocketA.splat = splatA;
 	rocketB.splat = splatB;
@@ -358,10 +414,58 @@ function setup() {
 	addTrail(rocketA);
 	addTrail(rocketB);
 	addTrail(rocketC);
+	
+	menuMusic.play();
+	menuMusic.fadeIn(3);
 
 	//Tell the `renderer` to `render` the `stage`
 	gameLoop();
 	
+}
+
+function switchToGameMusic(){
+	if(menuMusic.playing){
+		menuMusic.fadeOut(1);
+		setTimeout(function(){menuMusic.pause();}, 1000);
+	}
+	if(creditsMusic.playing){
+		creditsMusic.fadeOut(1);
+		setTimeout(function(){creditsMusic.pause();}, 1000);
+	}
+	if(!gameMusic.playing){
+		gameMusic.play();
+		gameMusic.fadeIn(1);
+	}
+}
+
+function switchToMenuMusic(){
+	if(gameMusic.playing){
+		gameMusic.fadeOut(1);
+		setTimeout(function(){gameMusic.pause();}, 1000);
+	}animatronix
+	if(creditsMusic.playing){
+		creditsMusic.fadeOut(1);
+		setTimeout(function(){creditsMusic.pause();}, 1000);
+	}
+	if(!menuMusic.playing){
+		menuMusic.play();
+		menuMusic.fadeIn(1);
+	}
+}
+
+function switchToCreditsMusic(){
+	if(gameMusic.playing){
+		gameMusic.fadeOut(1);
+		setTimeout(function(){gameMusic.pause();}, 1000);
+	}
+	if(menuMusic.playing){
+		menuMusic.fadeOut(1);
+		setTimeout(function(){menuMusic.pause();}, 1000);
+	}
+	if(!creditsMusic.playing){
+		creditsMusic.play();
+		creditsMusic.fadeIn(1);
+	}
 }
 
 function addTrail(r){
@@ -486,6 +590,10 @@ function resetRocket(r){
 	}
 }
 
+function resetTarget(t){
+	t.position.set(t.initX, t.initY);
+}
+
 function getVelocity(dx, dy){
 	return Math.sqrt(dx*dx + dy*dy);
 }
@@ -526,15 +634,54 @@ function runGame(){
 	autopilots();
 	
 	rocketFlight();
+	
+	explosions();
+	
+	checkWin();
+}
+
+function explosions(){
+	
+	var to_remove = Array();
+	for(var i=0; i<animatronix.length; i++){
+		if(!explode(animatronix[i])){
+			to_remove.push(i);
+		}
+	}
+	
+	for(var i=0; i<to_remove.length; i++){
+		let removed = animatronix.splice(to_remove[i], to_remove[i]);
+		root.removeChild(removed[0]);
+	}
+}
+
+function explode(b){
+	if(b != null){
+		if(b.alpha > 0){
+			b.alpha -= 0.01;
+			b.scale.x += 0.02;
+			b.scale.y += 0.02;
+			b.rotation = Math.random()*Math.PI*2;
+			return true;
+		} else {
+			b.scale.x = 1;
+			b.scale.y = 1;
+			b.alpha = 1;
+			b.visible = false;
+			return false;
+		}
+	}
 }
 
 function collisions(){
 	// rocket collision
 	if(checkRocketCollision(rocketA, rocketC)){
 		//nothing
+		explosionSound();
 	}
 	if(checkRocketCollision(rocketB, rocketC)){
 		//nothing
+		explosionSound();
 	}
 	
 	if(checkRocketCollision(rocketA, rocketB)){
@@ -542,31 +689,42 @@ function collisions(){
 		scoreCountB.counter = 0;
 		updateScore(scoreCountA);
 		updateScore(scoreCountB);
+		explosionSound();
 	}
 	
 	if(checkTargetCollision(rocketA, targetA)){
 		//nothing
+		jumpSound();
 	}
 	
 	if(checkOutsideBoundary(rocketA)){
 		//nothing
+		explosionSound();
 	}
 	
 	// rocket b
 	if(checkTargetCollision(rocketB, targetB)){
 		//nothing
+		jumpSound();
 	}
 	
 	if(checkOutsideBoundary(rocketB)){
 		//nothing
+		explosionSound();
 	}
 }
 
 function checkOutsideBoundary(r){
 	if(isOutsideBoundary(r) && r.respects_boundary){
-		r.splat.position.set(r.x, r.y);
-		r.splat.visible = true;
-		r.boom.visible = false;
+		
+		let splat = r.splat;
+		let sprite = new Sprite(splat);
+		sprite.anchor.set(0.5,0.5);
+		root.addChild(sprite);
+		
+		sprite.position.set(r.x, r.y);
+		
+		animatronix.push(sprite);
 		
 		resetRocket(r);
 		return true;
@@ -577,10 +735,15 @@ function checkOutsideBoundary(r){
 
 function checkTargetCollision(r, t){
 	if(hitTestPointRectangle(r, t)){
-
-		r.boom.position.set(r.x, r.y);
-		r.splat.visible = false;
-		r.boom.visible = true;
+		let boom = choose(r.boom);
+		let sprite = new Sprite(boom);
+		sprite.anchor.set(0.5,0.5);
+		root.addChild(sprite);
+		
+		sprite.position.set(r.x, r.y);
+		
+		
+		animatronix.push(sprite);
 		
 		r.scorecount.counter++;
 		updateScore(r.scorecount);
@@ -594,12 +757,20 @@ function checkTargetCollision(r, t){
 
 function checkRocketCollision(r1, r2){
 	if(hitTestPointRectangle(r1, r2)){
-		r1.splat.position.set(r1.x, r1.y);
-		r2.splat.position.set(r2.x, r2.y);
-		r1.boom.visible = false;
-		r2.boom.visible = false;
-		r1.splat.visible = true;
-		r2.splat.visible = true;
+		let splat1 = r1.splat;
+		let splat2 = r2.splat;
+		let sprite1 = new Sprite(splat1);
+		let sprite2 = new Sprite(splat2);
+		
+		sprite1.anchor.set(0.5,0.5);
+		sprite2.anchor.set(0.5,0.5);
+		
+		root.addChild(sprite1, sprite2);
+		
+		sprite1.position.set(r1.x, r1.y);
+		sprite2.position.set(r2.x, r2.y);
+		
+		animatronix.push(sprite1, sprite2);
 		
 		resetRocket(r1);
 		resetRocket(r2);
@@ -620,11 +791,55 @@ function autopilots(){
 	}
 }
 
+function checkWin(){
+	if(scoreCountA.counter > 10){
+		win.visible = true;
+		stateFunc = idle;
+		switchToCreditsMusic();
+	}
+	if(scoreCountB.counter > 10){
+		lose.visible = true;
+		stateFunc = idle;
+		switchToCreditsMusic();
+	}
+}
+
 function updateScore(s){
 	s.text = s.counter;
 }
 
 function idle(){}
+
+function restart(){
+	if(!(win.visible || lose.visible)){
+		return;
+	}
+	
+	scoreCountA.counter = 0;
+	scoreCountA.text = scoreCountA.counter;
+	scoreCountB.counter = 0;
+	scoreCountB.text = scoreCountB.counter;
+	
+	resetRocket(rocketA);
+	resetRocket(rocketB);
+	resetRocket(rocketC);
+	
+	rocketCountA.counter = 0;
+	rocketCountA.text = rocketCountA.counter;
+	rocketCountB.counter = 0;
+	rocketCountB.text = rocketCountB.counter;
+	
+	
+	resetTarget(targetA);
+	resetTarget(targetB);
+	
+	stateFunc = idle;
+	
+	win.visible = false;
+	lose.visible = false;
+	help.visible = true;
+	switchToMenuMusic();
+}
 
 function relocateTarget(t){
 	t.x = 300 + Math.random()*(window.innerWidth-350)
@@ -703,17 +918,6 @@ function autopilot(r, t){
 	
 }
 
-function hideBoom(c){
-	if(c==='A'){
-		splatA.visible = false;
-		boomA.visible = false;
-	}
-	if(c==='B'){
-		splatB.visible = false;
-		boomB.visible = false;
-	}
-	
-}
 
 function isOutsideBoundary(r){
 	if(r.x < (boundary.left)) return true;
@@ -854,3 +1058,67 @@ function hitTestPointRectangle(r1, r2) {
 	//`hit` will be either `true` or `false`
 	return hit;
 };
+
+function explosionSound() {
+  soundEffect(
+    16,          //frequency
+    0,           //attack
+    1,           //decay
+    "sawtooth",  //waveform
+    1,           //volume
+    0,           //pan
+    0,           //wait before playing
+    0,           //pitch bend amount
+    false,       //reverse
+    0,           //random pitch range
+    50,          //dissonance
+    undefined,   //echo array: [delay, feedback, filter]
+    undefined    //reverb array: [duration, decay, reverse?]
+  );
+}
+function asdfjiadfadsf(){
+	if(window.location.hash == "#hype"){
+		rocketA.texture = loader.resources["images/boom03.png"].texture;
+	}
+};
+
+function shootSound() {
+  soundEffect(
+    1046.5,           //frequency
+    0,                //attack
+    0.3,              //decay
+    "sawtooth",       //waveform
+    1,                //Volume
+    -0.8,             //pan
+    0,                //wait before playing
+    1200,             //pitch bend amount
+    false,            //reverse bend
+    0,                //random pitch range
+    25,               //dissonance
+    [0.2, 0.2, 2000], //echo array: [delay, feedback, filter]
+    undefined         //reverb array: [duration, decay, reverse?]
+  );
+}
+
+function jumpSound() {
+  soundEffect(
+    523.25,       //frequency
+    0.05,         //attack
+    0.2,          //decay
+    "sine",       //waveform
+    3,            //volume
+    0.8,          //pan
+    0,            //wait before playing
+    600,          //pitch bend amount
+    true,         //reverse
+    100,          //random pitch range
+    0,            //dissonance
+    undefined,    //echo array: [delay, feedback, filter]
+    undefined     //reverb array: [duration, decay, reverse?]
+  );
+}
+
+function choose(choices) {
+  var index = Math.floor(Math.random() * choices.length);
+  return choices[index];
+}

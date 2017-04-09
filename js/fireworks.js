@@ -38,7 +38,7 @@ message.anchor.set(0.5,1);
 message.position.set(window.innerWidth/2, window.innerHeight);
 root.addChild(message);
 
-var menuMusic, gameMusic, creditsMusic;
+var menuMusic, gameMusic, creditsMusic, winMusic, loseMusic;
 
 function startGame(){
 	document.getElementById("intro").remove();
@@ -46,8 +46,10 @@ function startGame(){
 	document.body.appendChild(renderer.view);
 	sounds.load([
 	"sound/Rites.mp3",
-	"sound/Cyborg Ninja.mp3",
-	"sound/Rocket.mp3"
+	"sound/Cyborg Ninja_s.mp3",
+	"sound/Rocket.mp3",
+	"sound/Winner Winner.mp3",
+	"sound/Hamster March.mp3"
 	]);
 
 	sounds.whenLoaded = loadGraphics;
@@ -56,13 +58,16 @@ function startGame(){
 function loadGraphics(){
 	
 	menuMusic = sounds["sound/Rites.mp3"];
-	gameMusic = sounds["sound/Cyborg Ninja.mp3"];
+	gameMusic = sounds["sound/Cyborg Ninja_s.mp3"];
 	creditsMusic = sounds["sound/Rocket.mp3"];
+	winMusic = sounds["sound/Hamster March.mp3"];
+	loseMusic = sounds["sound/Winner Winner.mp3"];
 	
-	gameMusic.volume = 0.3;
 	gameMusic.loop = true;
 	menuMusic.loop = true;
 	creditsMusic.loop = true;
+	winMusic.loop = false;
+	loseMusic.loop = false;
 	
 	loader.add([
 	"images/backdrop.png",
@@ -424,47 +429,57 @@ function setup() {
 }
 
 function switchToGameMusic(){
-	if(menuMusic.playing){
-		menuMusic.fadeOut(1);
-		setTimeout(function(){menuMusic.pause();}, 1000);
-	}
-	if(creditsMusic.playing){
-		creditsMusic.fadeOut(1);
-		setTimeout(function(){creditsMusic.pause();}, 1000);
-	}
-	if(!gameMusic.playing){
-		gameMusic.play();
-		gameMusic.fadeIn(1);
-	}
+	stopMusic(menuMusic);
+	stopMusic(creditsMusic);
+	stopMusic(winMusic);
+	stopMusic(loseMusic);
+	startMusic(gameMusic);
 }
 
 function switchToMenuMusic(){
-	if(gameMusic.playing){
-		gameMusic.fadeOut(1);
-		setTimeout(function(){gameMusic.pause();}, 1000);
-	}animatronix
-	if(creditsMusic.playing){
-		creditsMusic.fadeOut(1);
-		setTimeout(function(){creditsMusic.pause();}, 1000);
-	}
-	if(!menuMusic.playing){
-		menuMusic.play();
-		menuMusic.fadeIn(1);
-	}
+	stopMusic(gameMusic);
+	stopMusic(creditsMusic);
+	stopMusic(winMusic);
+	stopMusic(loseMusic);
+	startMusic(menuMusic);
 }
 
 function switchToCreditsMusic(){
-	if(gameMusic.playing){
-		gameMusic.fadeOut(1);
-		setTimeout(function(){gameMusic.pause();}, 1000);
+	stopMusic(gameMusic);
+	stopMusic(menuMusic);
+	stopMusic(winMusic);
+	stopMusic(loseMusic);
+	startMusic(creditsMusic);
+}
+function switchToWinMusic(){
+	stopMusic(gameMusic);
+	stopMusic(menuMusic);
+	stopMusic(creditsMusic);
+	stopMusic(loseMusic);
+	if(!winMusic.playing){
+		winMusic.playFrom(1.5);
+		winMusic.fadeIn(1);
 	}
-	if(menuMusic.playing){
-		menuMusic.fadeOut(1);
-		setTimeout(function(){menuMusic.pause();}, 1000);
+}
+function switchToLoseMusic(){
+	stopMusic(gameMusic);
+	stopMusic(menuMusic);
+	stopMusic(winMusic);
+	stopMusic(creditsMusic);
+	startMusic(loseMusic);
+}
+
+function stopMusic(m){
+	if(m.playing){
+		m.fadeOut(1);
+		setTimeout(function(){m.pause();}, 1000);
 	}
-	if(!creditsMusic.playing){
-		creditsMusic.play();
-		creditsMusic.fadeIn(1);
+}
+
+function startMusic(m){
+	if(!m.playing){
+		m.play();
+		m.fadeIn(1);
 	}
 }
 
@@ -795,12 +810,12 @@ function checkWin(){
 	if(scoreCountA.counter > 10){
 		win.visible = true;
 		stateFunc = idle;
-		switchToCreditsMusic();
+		switchToWinMusic();
 	}
 	if(scoreCountB.counter > 10){
 		lose.visible = true;
 		stateFunc = idle;
-		switchToCreditsMusic();
+		switchToLoseMusic();
 	}
 }
 

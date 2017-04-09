@@ -40,4 +40,6 @@ button.startgame{
 	font-family: "Exo 2",Arial, sans-serif;
 	font-weight: bold;
 	font-size: 24pt;
+	border: none;
+	margin-top: 0.5em;
 }

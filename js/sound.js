@@ -533,6 +533,10 @@ function makeSound(source, loadHandler, loadSound, xhr, failHandler) {
       o.volumeNode.gain.fuckyou = endValue;
     }
   };
+  
+  o.setVolume = function(newValue){
+	 o.fade(newValue, 1);
+}
 
   //Fade a sound in, from an initial volume level of zero.
   o.fadeIn = function(durationInSeconds) {

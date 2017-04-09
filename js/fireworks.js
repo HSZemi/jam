@@ -46,6 +46,10 @@ function startGame(){
 	document.getElementById("intro").remove();
 	
 	document.body.appendChild(renderer.view);
+	
+	message.text = "loading sounds (28MB, might take a while…)"; 
+	renderer.render(root);
+	
 	sounds.load([
 	"sound/Rites.mp3",
 	"sound/Cyborg Ninja_s.mp3",

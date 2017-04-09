@@ -38,7 +38,7 @@ message.anchor.set(0.5,1);
 message.position.set(window.innerWidth/2, window.innerHeight);
 root.addChild(message);
 
-var menuMusic, gameMusic, creditsMusic, winMusic, loseMusic;
+var menuMusic, gameMusic, creditsMusic, winMusic, loseMusic, commentsGood=Array(), commentsBad=Array();
 
 function startGame(){
 	document.getElementById("intro").remove();
@@ -49,7 +49,9 @@ function startGame(){
 	"sound/Cyborg Ninja_s.mp3",
 	"sound/Rocket.mp3",
 	"sound/Winner Winner.mp3",
-	"sound/Hamster March.mp3"
+	"sound/Hamster March.mp3",
+	"sound/bingo2.mp3",
+	"sound/bingo3.mp3"
 	]);
 
 	sounds.whenLoaded = loadGraphics;
@@ -62,6 +64,9 @@ function loadGraphics(){
 	creditsMusic = sounds["sound/Rocket.mp3"];
 	winMusic = sounds["sound/Hamster March.mp3"];
 	loseMusic = sounds["sound/Winner Winner.mp3"];
+	
+	commentsGood.push(sounds["sound/bingo3.mp3"]);
+	commentsBad.push(sounds["sound/bingo2.mp3"]);
 	
 	gameMusic.loop = true;
 	menuMusic.loop = true;
@@ -693,6 +698,9 @@ function collisions(){
 	if(checkRocketCollision(rocketA, rocketC)){
 		//nothing
 		explosionSound();
+// 		setTimeout(function(){
+// 			choose(commentsBad).play();
+// 		}, 1000);
 	}
 	if(checkRocketCollision(rocketB, rocketC)){
 		//nothing
@@ -710,11 +718,17 @@ function collisions(){
 	if(checkTargetCollision(rocketA, targetA)){
 		//nothing
 		jumpSound();
+// 		setTimeout(function(){
+// 			choose(commentsGood).play();
+// 		}, 1000);
 	}
 	
 	if(checkOutsideBoundary(rocketA)){
 		//nothing
 		explosionSound();
+// 		setTimeout(function(){
+// 			choose(commentsBad).play();
+// 		}, 1000);
 	}
 	
 	// rocket b
